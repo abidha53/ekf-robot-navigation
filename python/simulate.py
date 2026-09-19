@@ -1,0 +1,94 @@
+from dataclasses import dataclass, field
+
+import numpy as np
+
+import ekf_cpp
+import environment as env
+import perception
+import planner
+from controller import WaypointController
+from robot import DifferentialDriveRobot
+from sensors import OdometrySensor
+
+DT = 0.1
+MAX_STEPS = 3000
+INITIAL_COVARIANCE_DIAGONAL = 0.05
+
+_LANDMARKS_BY_ID = {lm.id: lm for lm in env.LANDMARKS}
+
+
+@dataclass
+class SimulationLog:
+    planned_path: list
+    true_poses: list = field(default_factory=list)
+    ekf_estimates: list = field(default_factory=list)
+    ekf_covariances: list = field(default_factory=list)
+    dead_reckoning_poses: list = field(default_factory=list)
+    detections_per_step: list = field(default_factory=list)
+    goal_reached: bool = False
+    steps_taken: int = 0
+
+
+def run_simulation(odometry_seed: int = 0, perception_seed: int = 1) -> SimulationLog:
+    path = planner.plan_path(env.START_POSE[:2], env.GOAL_POSITION)
+    if len(path) < 2:
+        raise RuntimeError("A* failed to find a path from START_POSE to GOAL_POSITION")
+
+    true_robot = DifferentialDriveRobot(*env.START_POSE)
+    dead_reckoning_robot = DifferentialDriveRobot(*env.START_POSE)
+    odometry = OdometrySensor(seed=odometry_seed)
+    perception_rng = np.random.default_rng(perception_seed)
+    controller = WaypointController()
+
+    initial_state = np.array(env.START_POSE)
+    initial_covariance = np.eye(3) * INITIAL_COVARIANCE_DIAGONAL
+    ekf = ekf_cpp.EKF(initial_state, initial_covariance)
+
+    log = SimulationLog(planned_path=path)
+    waypoint_idx = 1
+
+    for step in range(MAX_STEPS):
+        estimated_pose = tuple(ekf.get_state())
+        target = path[waypoint_idx]
+
+        v, omega = controller.compute_control(estimated_pose, target, DT)
+
+        v_noisy, omega_noisy = odometry.sense(v, omega)
+        ekf.predict(v_noisy, omega_noisy, DT)
+
+        true_robot.step(v, omega, DT)
+        dead_reckoning_robot.step(v_noisy, omega_noisy, DT)
+
+        image = perception.render_camera_view(true_robot.pose, rng=perception_rng)
+        detections = perception.detect_landmarks(image)
+        for landmark_id, meas_range, meas_bearing in detections:
+            landmark = _LANDMARKS_BY_ID[landmark_id]
+            ekf.update(meas_range, meas_bearing, landmark.x, landmark.y)
+
+        log.true_poses.append(true_robot.pose)
+        log.ekf_estimates.append(tuple(ekf.get_state()))
+        log.ekf_covariances.append(ekf.get_covariance())
+        log.dead_reckoning_poses.append(dead_reckoning_robot.pose)
+        log.detections_per_step.append(detections)
+
+        if controller.has_reached(tuple(ekf.get_state()), target):
+            controller.reset()
+            waypoint_idx += 1
+            if waypoint_idx >= len(path):
+                log.goal_reached = True
+                log.steps_taken = step + 1
+                break
+    else:
+        log.steps_taken = MAX_STEPS
+
+    return log
+
+
+if __name__ == "__main__":
+    result = run_simulation()
+    status = "reached goal" if result.goal_reached else "did NOT reach goal (hit MAX_STEPS)"
+    print(f"Simulation finished: {status} after {result.steps_taken} steps.")
+    print(f"Planned path had {len(result.planned_path)} waypoints.")
+    print(f"Final true pose: {result.true_poses[-1]}")
+    print(f"Final EKF estimate: {result.ekf_estimates[-1]}")
+    print(f"Final dead-reckoning pose: {result.dead_reckoning_poses[-1]}")

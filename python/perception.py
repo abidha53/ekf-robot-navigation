@@ -23,6 +23,8 @@ OCCLUSION_PROBABILITY = 0.10
 OCCLUSION_COVER_FRACTION = 0.5
 
 MIN_CONTOUR_AREA_PX = 15
+
+RADIUS_BIAS_CORRECTION_PX = 1.2
 _LANDMARK_SIGNATURES = {lm.id: (lm.color, lm.shape) for lm in env.LANDMARKS}
 
 
@@ -173,7 +175,7 @@ def detect_landmarks(image: np.ndarray) -> list:
             continue
         cx = moments["m10"] / moments["m00"]
 
-        equiv_radius_px = math.sqrt(area / math.pi)
+        equiv_radius_px = math.sqrt(area / math.pi) + RADIUS_BIAS_CORRECTION_PX
         estimated_range = FOCAL_LENGTH_PX * LANDMARK_REAL_RADIUS / equiv_radius_px
 
         estimated_bearing = math.atan2(cx - IMAGE_WIDTH / 2.0, FOCAL_LENGTH_PX)

@@ -25,7 +25,7 @@ private:
     static constexpr double kAlpha3 = 0.01;
     static constexpr double kAlpha4 = 0.05;
 
-    static constexpr double kSigmaRange = 0.3;
+    static constexpr double kSigmaRange = 0.7;
     static constexpr double kSigmaBearing = 0.05;
 
     static double normalize_angle(double angle);
