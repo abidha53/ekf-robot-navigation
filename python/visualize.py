@@ -1,5 +1,6 @@
 import math
 import os
+import sys
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -27,7 +28,7 @@ def _draw_static_world(ax) -> None:
     ax.set_aspect("equal")
 
 
-def plot_static_overview(log: SimulationLog, out_path: str) -> None:
+def plot_static_overview(log: SimulationLog, out_path: str) -> plt.Figure:
     fig, ax = plt.subplots(figsize=(8, 8))
     _draw_static_world(ax)
 
@@ -53,10 +54,10 @@ def plot_static_overview(log: SimulationLog, out_path: str) -> None:
     ax.legend(loc="upper left", fontsize=8)
     ax.set_title("Planned path vs true / EKF / dead-reckoning trajectories")
     fig.savefig(out_path, dpi=120)
-    plt.close(fig)
+    return fig
 
 
-def animate_trajectories(log: SimulationLog, out_path: str, stride: int = 2) -> None:
+def animate_trajectories(log: SimulationLog, out_path: str, stride: int = 2) -> tuple:
     fig, ax = plt.subplots(figsize=(7, 7))
     _draw_static_world(ax)
     ax.plot(*env.START_POSE[:2], marker="^", markersize=12, color="green")
@@ -83,7 +84,7 @@ def animate_trajectories(log: SimulationLog, out_path: str, stride: int = 2) -> 
     anim = animation.FuncAnimation(fig, update, frames=len(frame_indices),
                                     interval=40, blit=True)
     anim.save(out_path, writer="pillow", fps=25)
-    plt.close(fig)
+    return fig, anim
 
 
 def compute_position_rmse(log: SimulationLog) -> dict:
@@ -189,12 +190,13 @@ def write_metrics_summary(rmse_result: dict, perception_result: dict, log: Simul
 
 
 def main():
+    live = "--live" in sys.argv
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     log = run_simulation()
 
-    plot_static_overview(log, os.path.join(OUTPUT_DIR, "overview.png"))
-    animate_trajectories(log, os.path.join(OUTPUT_DIR, "animation.gif"))
+    overview_fig = plot_static_overview(log, os.path.join(OUTPUT_DIR, "overview.png"))
+    anim_fig, anim = animate_trajectories(log, os.path.join(OUTPUT_DIR, "animation.gif"))
 
     rmse_result = compute_position_rmse(log)
     plot_position_error(rmse_result, os.path.join(OUTPUT_DIR, "position_error.png"))
@@ -204,6 +206,13 @@ def main():
                            os.path.join(OUTPUT_DIR, "metrics_summary.txt"))
 
     print(f"\nAll outputs saved to {os.path.abspath(OUTPUT_DIR)}")
+
+    if live:
+        print("Opening live animation window (close it to exit)...")
+        plt.show()
+    else:
+        plt.close(overview_fig)
+        plt.close(anim_fig)
 
 
 if __name__ == "__main__":
