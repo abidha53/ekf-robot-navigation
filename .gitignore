@@ -6,6 +6,7 @@ build/
 *.egg-info/
 *.pyd
 *.so
+python/*.dll
 .vs/
 CMakeFiles/
 CMakeCache.txt

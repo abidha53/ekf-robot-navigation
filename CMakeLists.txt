@@ -51,6 +51,19 @@ set_target_properties(ekf_cpp PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python
 )
 
+if (MINGW)
+    get_filename_component(MINGW_BIN_DIR ${CMAKE_CXX_COMPILER} DIRECTORY)
+    foreach(RUNTIME_DLL libstdc++-6.dll libgcc_s_seh-1.dll libwinpthread-1.dll)
+        if (EXISTS "${MINGW_BIN_DIR}/${RUNTIME_DLL}")
+            add_custom_command(TARGET ekf_cpp POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${MINGW_BIN_DIR}/${RUNTIME_DLL}"
+                        "${CMAKE_SOURCE_DIR}/python/${RUNTIME_DLL}"
+            )
+        endif()
+    endforeach()
+endif()
+
 enable_testing()
 
 add_executable(test_ekf
