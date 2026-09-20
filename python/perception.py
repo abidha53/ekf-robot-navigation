@@ -25,7 +25,8 @@ OCCLUSION_COVER_FRACTION = 0.5
 MIN_CONTOUR_AREA_PX = 15
 
 RADIUS_BIAS_CORRECTION_PX = 1.2
-_LANDMARK_SIGNATURES = {lm.id: (lm.color, lm.shape) for lm in env.LANDMARKS}
+def _landmark_signatures() -> dict:
+    return {lm.id: (lm.color, lm.shape) for lm in env.LANDMARKS}
 
 
 def _relative_range_bearing(true_pose: tuple, landmark_x: float, landmark_y: float) -> tuple:
@@ -153,7 +154,7 @@ def detect_landmarks(image: np.ndarray) -> list:
     hsv_image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
     detections = []
 
-    for landmark_id, (color, expected_shape) in _LANDMARK_SIGNATURES.items():
+    for landmark_id, (color, expected_shape) in _landmark_signatures().items():
         lower, upper = _hsv_threshold_range(color)
         mask = cv2.inRange(hsv_image, lower, upper)
 

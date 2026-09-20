@@ -1,3 +1,4 @@
+import sys
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -14,9 +15,6 @@ DT = 0.1
 MAX_STEPS = 3000
 INITIAL_COVARIANCE_DIAGONAL = 0.05
 
-_LANDMARKS_BY_ID = {lm.id: lm for lm in env.LANDMARKS}
-
-
 @dataclass
 class SimulationLog:
     planned_path: list
@@ -30,6 +28,8 @@ class SimulationLog:
 
 
 def run_simulation(odometry_seed: int = 0, perception_seed: int = 1) -> SimulationLog:
+    landmarks_by_id = {lm.id: lm for lm in env.LANDMARKS}
+
     path = planner.plan_path(env.START_POSE[:2], env.GOAL_POSITION)
     if len(path) < 2:
         raise RuntimeError("A* failed to find a path from START_POSE to GOAL_POSITION")
@@ -62,7 +62,7 @@ def run_simulation(odometry_seed: int = 0, perception_seed: int = 1) -> Simulati
         image = perception.render_camera_view(true_robot.pose, rng=perception_rng)
         detections = perception.detect_landmarks(image)
         for landmark_id, meas_range, meas_bearing in detections:
-            landmark = _LANDMARKS_BY_ID[landmark_id]
+            landmark = landmarks_by_id[landmark_id]
             ekf.update(meas_range, meas_bearing, landmark.x, landmark.y)
 
         log.true_poses.append(true_robot.pose)
@@ -84,7 +84,20 @@ def run_simulation(odometry_seed: int = 0, perception_seed: int = 1) -> Simulati
     return log
 
 
+def scenario_from_argv(default: str = None) -> str:
+    if "--scenario" in sys.argv:
+        idx = sys.argv.index("--scenario")
+        if idx + 1 >= len(sys.argv):
+            raise SystemExit(f"--scenario needs a name, one of: {sorted(env.SCENARIOS)}")
+        return sys.argv[idx + 1]
+    return default or env.ACTIVE_SCENARIO
+
+
 if __name__ == "__main__":
+    env.load_scenario(scenario_from_argv())
+    scenario = env.SCENARIOS[env.ACTIVE_SCENARIO]
+    print(f"Scenario: {scenario.name} (difficulty {scenario.difficulty}/5), {scenario.description}")
+
     result = run_simulation()
     status = "reached goal" if result.goal_reached else "did NOT reach goal (hit MAX_STEPS)"
     print(f"Simulation finished: {status} after {result.steps_taken} steps.")

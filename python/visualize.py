@@ -10,7 +10,7 @@ import numpy as np
 import environment as env
 import perception
 import planner
-from simulate import SimulationLog, run_simulation
+from simulate import SimulationLog, run_simulation, scenario_from_argv
 
 ROBOT_DRAW_RADIUS = planner.ROBOT_RADIUS
 HEADING_ARROW_LENGTH = 0.7
@@ -296,17 +296,22 @@ def main():
     live = "--live" in sys.argv
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+    env.load_scenario(scenario_from_argv())
+    scenario = env.SCENARIOS[env.ACTIVE_SCENARIO]
+    print(f"Scenario: {scenario.name} (difficulty {scenario.difficulty}/5), {scenario.description}")
+    suffix = f"_{scenario.name}"
+
     log = run_simulation()
 
-    overview_fig = plot_static_overview(log, os.path.join(OUTPUT_DIR, "overview.png"))
-    anim_fig, anim = animate_trajectories(log, os.path.join(OUTPUT_DIR, "animation.gif"))
+    overview_fig = plot_static_overview(log, os.path.join(OUTPUT_DIR, f"overview{suffix}.png"))
+    anim_fig, anim = animate_trajectories(log, os.path.join(OUTPUT_DIR, f"animation{suffix}.gif"))
 
     rmse_result = compute_position_rmse(log)
-    plot_position_error(rmse_result, os.path.join(OUTPUT_DIR, "position_error.png"))
+    plot_position_error(rmse_result, os.path.join(OUTPUT_DIR, f"position_error{suffix}.png"))
 
     perception_result = evaluate_perception_accuracy(log)
     write_metrics_summary(rmse_result, perception_result, log,
-                           os.path.join(OUTPUT_DIR, "metrics_summary.txt"))
+                           os.path.join(OUTPUT_DIR, f"metrics_summary{suffix}.txt"))
 
     print(f"\nAll outputs saved to {os.path.abspath(OUTPUT_DIR)}")
 
