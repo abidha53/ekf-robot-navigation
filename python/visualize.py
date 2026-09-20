@@ -73,9 +73,7 @@ def _covariance_ellipse_params(covariance_2x2: np.ndarray) -> tuple:
     return width, height, angle_deg
 
 
-def animate_trajectories(log: SimulationLog, out_path: str, stride: int = 2) -> tuple:
-    fig, ax = plt.subplots(figsize=(7, 7))
-    _draw_static_world(ax)
+def _build_animation(ax, log: SimulationLog, stride: int = 2):
     ax.plot(*env.START_POSE[:2], marker="^", markersize=12, color="green")
     ax.plot(*env.GOAL_POSITION, marker="*", markersize=15, color="blue")
 
@@ -83,9 +81,9 @@ def animate_trajectories(log: SimulationLog, out_path: str, stride: int = 2) -> 
     ekf_line, = ax.plot([], [], color="limegreen", linewidth=2, label="EKF estimate")
     dr_line, = ax.plot([], [], color="red", linestyle="--", label="dead-reckoning only")
     ax.legend(loc="upper left", fontsize=8)
-    ax.set_title("Robot localization: true vs EKF vs dead-reckoning")
 
     frame_indices = list(range(0, len(log.true_poses), stride))
+    landmarks_by_id = {lm.id: lm for lm in env.LANDMARKS}
     dynamic_artists = []
 
     def update(frame_num):
@@ -131,7 +129,6 @@ def animate_trajectories(log: SimulationLog, out_path: str, stride: int = 2) -> 
         ax.add_patch(uncertainty_ellipse)
         dynamic_artists.append(uncertainty_ellipse)
 
-        landmarks_by_id = {lm.id: lm for lm in env.LANDMARKS}
         for landmark_id, _range, _bearing in log.detections_per_step[i]:
             lm = landmarks_by_id[landmark_id]
             highlight = Circle((lm.x, lm.y), 0.6, fill=False,
@@ -139,10 +136,58 @@ def animate_trajectories(log: SimulationLog, out_path: str, stride: int = 2) -> 
             ax.add_patch(highlight)
             dynamic_artists.append(highlight)
 
-    anim = animation.FuncAnimation(fig, update, frames=len(frame_indices),
-                                    interval=40, blit=False)
+    return update, len(frame_indices)
+
+
+def animate_trajectories(log: SimulationLog, out_path: str, stride: int = 2) -> tuple:
+    fig, ax = plt.subplots(figsize=(7, 7))
+    _draw_static_world(ax)
+    ax.set_title("Robot localization: true vs EKF vs dead-reckoning")
+
+    update, n_frames = _build_animation(ax, log, stride)
+
+    anim = animation.FuncAnimation(fig, update, frames=n_frames, interval=40, blit=False)
     anim.save(out_path, writer="pillow", fps=25)
     return fig, anim
+
+
+def show_live_simulation(log: SimulationLog, stride: int = 2) -> None:
+    from matplotlib.widgets import Button
+
+    fig, ax = plt.subplots(figsize=(7, 7))
+    _draw_static_world(ax)
+    fig.subplots_adjust(bottom=0.14)
+
+    update, n_frames = _build_animation(ax, log, stride)
+    update(0)
+
+    title = ax.set_title("Press SPACE or click \"Start Simulation\" to begin")
+
+    anim = animation.FuncAnimation(fig, update, frames=n_frames,
+                                    interval=40, blit=False, repeat=False)
+    anim.event_source.stop()
+
+    state = {"started": False}
+
+    def start(_event=None):
+        if state["started"]:
+            return
+        state["started"] = True
+        title.set_text("Robot localization: true vs EKF vs dead-reckoning")
+        start_button.ax.set_visible(False)
+        fig.canvas.draw_idle()
+        anim.event_source.start()
+
+    button_ax = fig.add_axes([0.4, 0.02, 0.22, 0.06])
+    start_button = Button(button_ax, "Start Simulation")
+    start_button.on_clicked(start)
+
+    def on_key(event):
+        if event.key == " ":
+            start()
+    fig.canvas.mpl_connect("key_press_event", on_key)
+
+    plt.show()
 
 
 def compute_position_rmse(log: SimulationLog) -> dict:
@@ -265,12 +310,12 @@ def main():
 
     print(f"\nAll outputs saved to {os.path.abspath(OUTPUT_DIR)}")
 
+    plt.close(overview_fig)
+    plt.close(anim_fig)
+
     if live:
-        print("Opening live animation window (close it to exit)...")
-        plt.show()
-    else:
-        plt.close(overview_fig)
-        plt.close(anim_fig)
+        print('Opening interactive window, press SPACE or click "Start Simulation" to begin...')
+        show_live_simulation(log)
 
 
 if __name__ == "__main__":
