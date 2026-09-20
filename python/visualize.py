@@ -4,11 +4,18 @@ import sys
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from matplotlib.patches import Circle, Ellipse, Wedge
 import numpy as np
 
 import environment as env
 import perception
+import planner
 from simulate import SimulationLog, run_simulation
+
+ROBOT_DRAW_RADIUS = planner.ROBOT_RADIUS
+HEADING_ARROW_LENGTH = 0.7
+
+COVARIANCE_ELLIPSE_N_SIGMA = 2
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "output")
 
@@ -57,6 +64,15 @@ def plot_static_overview(log: SimulationLog, out_path: str) -> plt.Figure:
     return fig
 
 
+def _covariance_ellipse_params(covariance_2x2: np.ndarray) -> tuple:
+    eigenvalues, eigenvectors = np.linalg.eigh(covariance_2x2)
+    major_vec = eigenvectors[:, -1]
+    angle_deg = math.degrees(math.atan2(major_vec[1], major_vec[0]))
+    width = 2 * COVARIANCE_ELLIPSE_N_SIGMA * math.sqrt(max(eigenvalues[-1], 0.0))
+    height = 2 * COVARIANCE_ELLIPSE_N_SIGMA * math.sqrt(max(eigenvalues[0], 0.0))
+    return width, height, angle_deg
+
+
 def animate_trajectories(log: SimulationLog, out_path: str, stride: int = 2) -> tuple:
     fig, ax = plt.subplots(figsize=(7, 7))
     _draw_static_world(ax)
@@ -70,19 +86,61 @@ def animate_trajectories(log: SimulationLog, out_path: str, stride: int = 2) -> 
     ax.set_title("Robot localization: true vs EKF vs dead-reckoning")
 
     frame_indices = list(range(0, len(log.true_poses), stride))
+    dynamic_artists = []
 
     def update(frame_num):
         i = frame_indices[frame_num]
+
         true_line.set_data([p[0] for p in log.true_poses[:i + 1]],
                             [p[1] for p in log.true_poses[:i + 1]])
         ekf_line.set_data([p[0] for p in log.ekf_estimates[:i + 1]],
                            [p[1] for p in log.ekf_estimates[:i + 1]])
         dr_line.set_data([p[0] for p in log.dead_reckoning_poses[:i + 1]],
                           [p[1] for p in log.dead_reckoning_poses[:i + 1]])
-        return true_line, ekf_line, dr_line
+
+        for artist in dynamic_artists:
+            artist.remove()
+        dynamic_artists.clear()
+
+        true_x, true_y, true_theta = log.true_poses[i]
+        heading_deg = math.degrees(true_theta)
+
+        fov_cone = Wedge((true_x, true_y), perception.CAMERA_MAX_RANGE,
+                          heading_deg - perception.CAMERA_FOV_DEG / 2,
+                          heading_deg + perception.CAMERA_FOV_DEG / 2,
+                          color="deepskyblue", alpha=0.12, zorder=1)
+        ax.add_patch(fov_cone)
+        dynamic_artists.append(fov_cone)
+
+        robot_body = Circle((true_x, true_y), ROBOT_DRAW_RADIUS,
+                             facecolor="navy", edgecolor="black", zorder=4)
+        ax.add_patch(robot_body)
+        dynamic_artists.append(robot_body)
+
+        heading_line, = ax.plot(
+            [true_x, true_x + HEADING_ARROW_LENGTH * math.cos(true_theta)],
+            [true_y, true_y + HEADING_ARROW_LENGTH * math.sin(true_theta)],
+            color="white", linewidth=2, zorder=5)
+        dynamic_artists.append(heading_line)
+
+        ekf_x, ekf_y, _ = log.ekf_estimates[i]
+        width, height, angle_deg = _covariance_ellipse_params(log.ekf_covariances[i][:2, :2])
+        uncertainty_ellipse = Ellipse((ekf_x, ekf_y), width, height, angle=angle_deg,
+                                       facecolor="limegreen", edgecolor="darkgreen",
+                                       alpha=0.25, zorder=2)
+        ax.add_patch(uncertainty_ellipse)
+        dynamic_artists.append(uncertainty_ellipse)
+
+        landmarks_by_id = {lm.id: lm for lm in env.LANDMARKS}
+        for landmark_id, _range, _bearing in log.detections_per_step[i]:
+            lm = landmarks_by_id[landmark_id]
+            highlight = Circle((lm.x, lm.y), 0.6, fill=False,
+                                edgecolor="gold", linewidth=2.5, zorder=3)
+            ax.add_patch(highlight)
+            dynamic_artists.append(highlight)
 
     anim = animation.FuncAnimation(fig, update, frames=len(frame_indices),
-                                    interval=40, blit=True)
+                                    interval=40, blit=False)
     anim.save(out_path, writer="pillow", fps=25)
     return fig, anim
 
