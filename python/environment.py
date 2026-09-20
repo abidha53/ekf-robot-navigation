@@ -21,10 +21,9 @@ class Obstacle:
 
 
 OBSTACLES = [
-    Obstacle(x=5.0, y=5.0, width=3.0, height=8.0),
-    Obstacle(x=10.0, y=2.0, width=2.0, height=6.0),
-    Obstacle(x=13.0, y=10.0, width=5.0, height=2.0),
-    Obstacle(x=6.0, y=14.0, width=4.0, height=3.0),
+    Obstacle(x=0.0, y=5.0, width=15.0, height=1.5),
+    Obstacle(x=5.0, y=10.0, width=15.0, height=1.5),
+    Obstacle(x=0.0, y=14.5, width=15.0, height=1.5),
 ]
 
 
