@@ -44,6 +44,8 @@ HEADING_KI = 0.0
 HEADING_KD = 0.3
 MAX_ANGULAR_VELOCITY = 2.0
 
+SPEED_TAPER_POWER = 4
+
 LINEAR_KP = 0.8
 LINEAR_KI = 0.0
 LINEAR_KD = 0.0
@@ -80,7 +82,7 @@ class WaypointController:
         omega = self._heading_pid.compute(heading_error, dt)
         v = self._linear_pid.compute(distance, dt)
 
-        v *= max(0.0, math.cos(heading_error))
+        v *= max(0.0, math.cos(heading_error)) ** SPEED_TAPER_POWER
 
         return v, omega
 
