@@ -307,7 +307,15 @@ def main():
     suffix = f"_{scenario.name}"
 
     seed = seed_from_argv()
+    print("Running simulation...")
     log = run_simulation(odometry_seed=seed, perception_seed=seed + 1)
+    status = "reached goal" if log.goal_reached else "did NOT reach goal (hit MAX_STEPS)"
+    print(f"Simulation finished: {status} after {log.steps_taken} steps.")
+
+    if live:
+        print('Opening interactive window, press SPACE or click "Start / Restart" to begin...')
+        show_live_simulation(log)
+        return
 
     overview_fig = plot_static_overview(log, os.path.join(OUTPUT_DIR, f"overview{suffix}.png"))
     anim_fig, anim = animate_trajectories(log, os.path.join(OUTPUT_DIR, f"animation{suffix}.gif"))
@@ -323,10 +331,6 @@ def main():
 
     plt.close(overview_fig)
     plt.close(anim_fig)
-
-    if live:
-        print('Opening interactive window, press SPACE or click "Start Simulation" to begin...')
-        show_live_simulation(log)
 
 
 if __name__ == "__main__":

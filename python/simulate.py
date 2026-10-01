@@ -70,6 +70,9 @@ def run_simulation(odometry_seed: int = 0, perception_seed: int = 1) -> Simulati
     backup_turn_rate = 0.0
 
     for step in range(MAX_STEPS):
+        if step > 0 and step % 2000 == 0:
+            print(f"  ...simulated {step}/{MAX_STEPS} steps so far")
+
         estimated_pose = tuple(ekf.get_state())
         target = path[waypoint_idx]
 
