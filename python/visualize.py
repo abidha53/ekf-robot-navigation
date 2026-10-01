@@ -20,6 +20,10 @@ COVARIANCE_ELLIPSE_N_SIGMA = 2
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "output")
 
+GIF_TARGET_FRAME_COUNT = 300
+
+TRAIL_LENGTH = 800
+
 
 def _draw_static_world(ax) -> None:
     for obs in env.OBSTACLES:
@@ -89,13 +93,14 @@ def _build_animation(ax, log: SimulationLog, stride: int = 2):
 
     def update(frame_num):
         i = frame_indices[frame_num]
+        trail_start = max(0, i + 1 - TRAIL_LENGTH)
 
-        true_line.set_data([p[0] for p in log.true_poses[:i + 1]],
-                            [p[1] for p in log.true_poses[:i + 1]])
-        ekf_line.set_data([p[0] for p in log.ekf_estimates[:i + 1]],
-                           [p[1] for p in log.ekf_estimates[:i + 1]])
-        dr_line.set_data([p[0] for p in log.dead_reckoning_poses[:i + 1]],
-                          [p[1] for p in log.dead_reckoning_poses[:i + 1]])
+        true_line.set_data([p[0] for p in log.true_poses[trail_start:i + 1]],
+                            [p[1] for p in log.true_poses[trail_start:i + 1]])
+        ekf_line.set_data([p[0] for p in log.ekf_estimates[trail_start:i + 1]],
+                           [p[1] for p in log.ekf_estimates[trail_start:i + 1]])
+        dr_line.set_data([p[0] for p in log.dead_reckoning_poses[trail_start:i + 1]],
+                          [p[1] for p in log.dead_reckoning_poses[trail_start:i + 1]])
 
         for artist in dynamic_artists:
             artist.remove()
@@ -318,7 +323,9 @@ def main():
         return
 
     overview_fig = plot_static_overview(log, os.path.join(OUTPUT_DIR, f"overview{suffix}.png"))
-    anim_fig, anim = animate_trajectories(log, os.path.join(OUTPUT_DIR, f"animation{suffix}.gif"))
+    gif_stride = max(2, log.steps_taken // GIF_TARGET_FRAME_COUNT)
+    anim_fig, anim = animate_trajectories(log, os.path.join(OUTPUT_DIR, f"animation{suffix}.gif"),
+                                           stride=gif_stride)
 
     rmse_result = compute_position_rmse(log)
     plot_position_error(rmse_result, os.path.join(OUTPUT_DIR, f"position_error{suffix}.png"))
