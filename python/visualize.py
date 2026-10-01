@@ -1,3 +1,4 @@
+import itertools
 import math
 import os
 import sys
@@ -158,20 +159,29 @@ def show_live_simulation(log: SimulationLog, stride: int = 2) -> None:
     _draw_static_world(ax)
     fig.subplots_adjust(bottom=0.14)
 
-    update, n_frames = _build_animation(ax, log, stride)
-    update(0)
+    render_frame, n_frames = _build_animation(ax, log, stride)
+    render_frame(0)
 
     title = ax.set_title("Press SPACE or click \"Start / Restart\" to begin")
-    state = {"anim": None}
+    play_state = {"frame": 0, "playing": False}
+
+    def _tick(_i):
+        if not play_state["playing"]:
+            return ()
+        if play_state["frame"] >= n_frames:
+            play_state["playing"] = False
+            return ()
+        render_frame(play_state["frame"])
+        play_state["frame"] += 1
+        return ()
+
+    anim = animation.FuncAnimation(fig, _tick, frames=itertools.count(),
+                                    interval=40, blit=False, cache_frame_data=False)
 
     def start(_event=None):
-        if state["anim"] is not None:
-            state["anim"].event_source.stop()
-        update(0)
+        play_state["frame"] = 0
+        play_state["playing"] = True
         title.set_text("Robot localization: true vs EKF vs dead-reckoning")
-        state["anim"] = animation.FuncAnimation(fig, update, frames=n_frames,
-                                                 interval=40, blit=False, repeat=False)
-        fig.canvas.draw_idle()
 
     button_ax = fig.add_axes([0.38, 0.02, 0.26, 0.06])
     start_button = Button(button_ax, "Start / Restart")
