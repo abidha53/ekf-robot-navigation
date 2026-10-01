@@ -10,7 +10,7 @@ import numpy as np
 import environment as env
 import perception
 import planner
-from simulate import SimulationLog, run_simulation, scenario_from_argv
+from simulate import SimulationLog, run_simulation, scenario_from_argv, seed_from_argv
 
 ROBOT_DRAW_RADIUS = planner.ROBOT_RADIUS
 HEADING_ARROW_LENGTH = 0.7
@@ -301,7 +301,8 @@ def main():
     print(f"Scenario: {scenario.name} (difficulty {scenario.difficulty}/5), {scenario.description}")
     suffix = f"_{scenario.name}"
 
-    log = run_simulation()
+    seed = seed_from_argv()
+    log = run_simulation(odometry_seed=seed, perception_seed=seed + 1)
 
     overview_fig = plot_static_overview(log, os.path.join(OUTPUT_DIR, f"overview{suffix}.png"))
     anim_fig, anim = animate_trajectories(log, os.path.join(OUTPUT_DIR, f"animation{suffix}.gif"))

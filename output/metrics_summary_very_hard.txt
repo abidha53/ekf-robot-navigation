@@ -1,17 +1,17 @@
 === Simulation result ===
 Goal reached: True
-Steps taken: 735
+Steps taken: 1298
 
 === Metric 1: Localization accuracy (EKF-fused vs dead-reckoning-only) ===
-EKF-fused RMSE:      0.3153 world units
-Dead-reckoning RMSE: 0.8482 world units
-Improvement factor:  2.69x
+EKF-fused RMSE:      0.6224 world units
+Dead-reckoning RMSE: 4.7327 world units
+Improvement factor:  7.60x
 
 === Metric 2/3: Perception (classical CV) accuracy ===
-True positives:  186
+True positives:  626
 False positives: 0
-False negatives: 32
+False negatives: 65
 Precision (of reported detections, how many were real): 100.0%
-Recall (of visible landmarks, how many were caught):     85.3%
-Mean range error on correct detections:   0.5728 world units
-Mean bearing error on correct detections: 0.348 degrees
+Recall (of visible landmarks, how many were caught):     90.6%
+Mean range error on correct detections:   0.8036 world units
+Mean bearing error on correct detections: 0.296 degrees

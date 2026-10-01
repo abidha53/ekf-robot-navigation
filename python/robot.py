@@ -12,11 +12,14 @@ class DifferentialDriveRobot:
     def pose(self):
         return (self.x, self.y, self.theta)
 
+    def predict_pose(self, v: float, omega: float, dt: float) -> tuple:
+        x = self.x + v * math.cos(self.theta) * dt
+        y = self.y + v * math.sin(self.theta) * dt
+        theta = _wrap_angle(self.theta + omega * dt)
+        return (x, y, theta)
+
     def step(self, v: float, omega: float, dt: float) -> None:
-        self.x += v * math.cos(self.theta) * dt
-        self.y += v * math.sin(self.theta) * dt
-        self.theta += omega * dt
-        self.theta = _wrap_angle(self.theta)
+        self.x, self.y, self.theta = self.predict_pose(v, omega, dt)
 
 
 def _wrap_angle(angle: float) -> float:
