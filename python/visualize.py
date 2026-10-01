@@ -10,10 +10,10 @@ import numpy as np
 
 import environment as env
 import perception
-import planner
-from simulate import SimulationLog, run_simulation, scenario_from_argv, seed_from_argv
+from simulate import (SimulationLog, run_simulation, scenario_from_argv, seed_from_argv,
+                       ROBOT_PHYSICAL_RADIUS)
 
-ROBOT_DRAW_RADIUS = planner.ROBOT_RADIUS
+ROBOT_DRAW_RADIUS = ROBOT_PHYSICAL_RADIUS
 HEADING_ARROW_LENGTH = 0.7
 
 COVARIANCE_ELLIPSE_N_SIGMA = 2
