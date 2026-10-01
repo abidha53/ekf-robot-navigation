@@ -161,25 +161,20 @@ def show_live_simulation(log: SimulationLog, stride: int = 2) -> None:
     update, n_frames = _build_animation(ax, log, stride)
     update(0)
 
-    title = ax.set_title("Press SPACE or click \"Start Simulation\" to begin")
-
-    anim = animation.FuncAnimation(fig, update, frames=n_frames,
-                                    interval=40, blit=False, repeat=False)
-    anim.event_source.stop()
-
-    state = {"started": False}
+    title = ax.set_title("Press SPACE or click \"Start / Restart\" to begin")
+    state = {"anim": None}
 
     def start(_event=None):
-        if state["started"]:
-            return
-        state["started"] = True
+        if state["anim"] is not None:
+            state["anim"].event_source.stop()
+        update(0)
         title.set_text("Robot localization: true vs EKF vs dead-reckoning")
-        start_button.ax.set_visible(False)
+        state["anim"] = animation.FuncAnimation(fig, update, frames=n_frames,
+                                                 interval=40, blit=False, repeat=False)
         fig.canvas.draw_idle()
-        anim.event_source.start()
 
-    button_ax = fig.add_axes([0.4, 0.02, 0.22, 0.06])
-    start_button = Button(button_ax, "Start Simulation")
+    button_ax = fig.add_axes([0.38, 0.02, 0.26, 0.06])
+    start_button = Button(button_ax, "Start / Restart")
     start_button.on_clicked(start)
 
     def on_key(event):
