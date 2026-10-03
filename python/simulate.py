@@ -34,6 +34,7 @@ def _backup_arc_is_safe(start_pose: tuple, omega: float, n_steps: int) -> bool:
             return False
     return True
 
+
 @dataclass
 class SimulationLog:
     planned_path: list
@@ -149,7 +150,7 @@ def seed_from_argv(default: int = 0) -> int:
 if __name__ == "__main__":
     env.load_scenario(scenario_from_argv())
     scenario = env.SCENARIOS[env.ACTIVE_SCENARIO]
-    print(f"Scenario: {scenario.name} (difficulty {scenario.difficulty}/5), {scenario.description}")
+    print(f"Scenario: {scenario.name} (difficulty {scenario.difficulty}/5): {scenario.description}")
 
     seed = seed_from_argv()
     result = run_simulation(odometry_seed=seed, perception_seed=seed + 1)

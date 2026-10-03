@@ -292,10 +292,6 @@ def write_metrics_summary(rmse_result: dict, perception_result: dict, log: Simul
         f"Recall (of visible landmarks, how many were caught):     {perception_result['recall']:.1%}",
         f"Mean range error on correct detections:   {perception_result['mean_range_error']:.4f} world units",
         f"Mean bearing error on correct detections: {perception_result['mean_bearing_error_deg']:.3f} degrees",
-        "",
-        "This shows how perception noise propagates into localization: the",
-        "EKF's accuracy above is bounded by these range/bearing errors, not",
-        "by the EKF math itself (which is exact given its inputs).",
     ]
     with open(out_path, "w") as f:
         f.write("\n".join(lines))
@@ -308,7 +304,7 @@ def main():
 
     env.load_scenario(scenario_from_argv())
     scenario = env.SCENARIOS[env.ACTIVE_SCENARIO]
-    print(f"Scenario: {scenario.name} (difficulty {scenario.difficulty}/5), {scenario.description}")
+    print(f"Scenario: {scenario.name} (difficulty {scenario.difficulty}/5): {scenario.description}")
     suffix = f"_{scenario.name}"
 
     seed = seed_from_argv()
@@ -318,7 +314,7 @@ def main():
     print(f"Simulation finished: {status} after {log.steps_taken} steps.")
 
     if live:
-        print('Opening interactive window, press SPACE or click "Start / Restart" to begin...')
+        print('Opening interactive window. Press SPACE or click "Start / Restart" to begin.')
         show_live_simulation(log)
         return
 
